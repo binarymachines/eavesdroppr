@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+'''Usage:     
+          eavesdrop 
+          eavesdrop -i <initfile> channels
+          eavesdrop -i <initfile> -c <event_channel> [-g (trigger | proc)]
+          
+   Options:
+          -g --generate    generate SQL LISTEN/NOTIFY code
+          -i --initfile    YAML initialization file
+          -c --channel     target event channel
+'''
+
+#
+# eavesdroppr: eavesdrop on PostgreSQL records
+# code generator and dependency injector for observing Postgres changes
+# via LISTEN/NOTIFY
+#
+
+import os, sys
+import docopt
+import yaml
+import pgpubsub
+import logging
+from snap import snap, common
+import core
+
+SUPPORTED_DB_OPS = ['INSERT', 'UPDATE']
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+
+def main(args):
+    print args
+
+    if not args.get('--initfile') and not args.get('--channel'):
+        print 'run eavesdrop in CLI interactive mode'
+        return 0
+
+    yaml_config = None
+    if args.get('--initfile'):
+        yaml_config = common.read_config_file(args['<initfile>'])
+
+    if args.get('channels'):
+        print '\n'.join(yaml_config['channels'].keys())
+        return 0
+
+    
+
+
+    
+    channel_id = args['<event_channel>']
+    if not yaml_config['channels'].get(channel_id):
+        raise eavesdroppr.NoSuchEventChannel(channel_id)
+
+    channel_config = yaml_config['channels'][channel_id]
+
+    if args['--generate']:
+        core.generate_code(channel_config, args)
+    else:
+        core.listen(channel_id, yaml_config, args)
+    
+        
+if __name__ == '__main__':
+    args = docopt.docopt(__doc__)
+    main(args)
