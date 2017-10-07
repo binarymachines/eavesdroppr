@@ -35,7 +35,6 @@ class UnsupportedDBOperation(Exception):
         Exception.__init__(self, 'The database operation "%s" is not supported.' % operation)
 
 
-
 def generate_code(event_channel, channel_config, **kwargs):
     operation = channel_config['db_operation']
     if not operation in SUPPORTED_DB_OPS:
@@ -43,7 +42,7 @@ def generate_code(event_channel, channel_config, **kwargs):
 
     table_name = channel_config['db_table_name']
     db_schema = channel_config.get('db_schema') or 'public'
-    proc_name = channel_config.get('db_proc_name') or '%s_%s_notify' % (table_name, operation.lower())
+    procedure_name = channel_config.get('db_proc_name') or '%s_%s_notify' % (table_name, operation.lower())
     trigger_name = channel_config.get('db_trigger_name') or 'trg_%s_%s' % (table_name, operation.lower())
     source_fields = channel_config['payload_fields']
     primary_key_field = channel_config['pk_field_name']
@@ -55,10 +54,9 @@ def generate_code(event_channel, channel_config, **kwargs):
     json_func = json_func_template.render(payload_fields=source_fields,
                                           pk_field=primary_key_field)
     
-    
-
-    if kwargs['proc']:
+    if kwargs['procedure']:
         print PROC_TEMPLATE.format(schema=db_schema,
+                                   proc_name=procedure_name,
                                    pk_field_name=primary_key_field,
                                    pk_field_type=primary_key_type,
                                    channel_name=event_channel,
@@ -68,7 +66,7 @@ def generate_code(event_channel, channel_config, **kwargs):
         print TRIGGER_TEMPLATE.format(schema=db_schema,
                                       table_name=table_name,
                                       trigger_name=trigger_name,
-                                      db_proc_name=proc_name,
+                                      db_proc_name=procedure_name,
                                       db_op=operation)
 
 

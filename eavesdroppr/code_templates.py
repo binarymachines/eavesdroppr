@@ -3,13 +3,13 @@
 
 JSON_BUILD_FUNC_TEMPLATE = '''
 json_build_object('table', TG_TABLE_NAME,
-                  '{{pk_field}}', {{pk_field}},
+                  'primary_key', {{pk_field}},
                   {% for field in payload_fields %}'{{field}}', NEW.{{field}},
                   {% endfor %}'type', TG_OP)
 '''
 
 PROC_TEMPLATE = '''
-CREATE OR REPLACE FUNCTION {schema}.table_update_notify() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION {schema}.{proc_name}() RETURNS trigger AS $$
 DECLARE
   {pk_field_name} {pk_field_type};
 BEGIN
