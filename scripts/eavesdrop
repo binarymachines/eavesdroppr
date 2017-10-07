@@ -25,8 +25,6 @@ import logging
 from snap import snap, common
 from eavesdroppr import core
 
-SUPPORTED_DB_OPS = ['INSERT', 'UPDATE']
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -55,7 +53,7 @@ def main(args):
     channel_config = yaml_config['channels'][channel_id]
 
     if args['--generate']:
-        core.generate_code(channel_config, **args)
+        core.generate_code(channel_id, channel_config, **args)
     else:
         core.listen(channel_id, yaml_config, **args)
     

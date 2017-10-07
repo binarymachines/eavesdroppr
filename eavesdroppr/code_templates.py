@@ -3,7 +3,8 @@
 
 JSON_BUILD_FUNC_TEMPLATE = '''
 json_build_object('table', TG_TABLE_NAME,
-                  {% for field in payload_fields %}'{{field}}', {{field}},
+                  '{{pk_field}}', {{pk_field}},
+                  {% for field in payload_fields %}'{{field}}', NEW.{{field}},
                   {% endfor %}'type', TG_OP)
 '''
 

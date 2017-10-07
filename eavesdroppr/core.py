@@ -2,8 +2,17 @@
 
 import os, sys
 import pgpubsub
-from snap import common
+from snap import snap, common
+from code_templates import *
+import logging
+import jinja2
 
+
+SUPPORTED_DB_OPS = ['INSERT', 'UPDATE']
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger('eavesdroppr')
 
 
 class NoSuchEventChannel(Exception):
@@ -23,7 +32,7 @@ class UnsupportedDBOperation(Exception):
 
 
 
-def generate_code(channel_name, channel_config, **kwargs):
+def generate_code(event_channel, channel_config, **kwargs):
     operation = channel_config['db_operation']
     if not operation in SUPPORTED_DB_OPS:
         raise eavesdroppr.UnsupportedDBOperation(operation)
@@ -33,23 +42,25 @@ def generate_code(channel_name, channel_config, **kwargs):
     proc_name = channel_config.get('db_proc_name') or '%s_%s_notify' % (table_name, operation.lower())
     trigger_name = channel_config.get('db_trigger_name') or 'trg_%s_%s' % (table_name, operation.lower())
     source_fields = channel_config['payload_fields']
+    primary_key_field = channel_config['pk_field_name']
+    primary_key_type = channel_config['pk_field_type']
     
     j2env = jinja2.Environment()
     template_mgr = common.JinjaTemplateManager(j2env)        
     json_func_template = j2env.from_string(JSON_BUILD_FUNC_TEMPLATE)
-    json_func = json_func_template.render(payload_fields=source_fields)
+    json_func = json_func_template.render(payload_fields=source_fields,
+                                          pk_field=primary_key_field)
     
-    pk_field = channel_config['pk_field_name']
-    pk_type = channel_config['pk_field_type']
+    
 
-    if args['--proc']:
+    if kwargs['proc']:
         print PROC_TEMPLATE.format(schema=db_schema,
-                                   pk_field_name=pk_field,
-                                   pk_field_type=pk_type,
+                                   pk_field_name=primary_key_field,
+                                   pk_field_type=primary_key_type,
                                    channel_name=event_channel,
                                    json_build_func=json_func)
 
-    elif args['--trigger']:
+    elif kwargs['trigger']:
         print TRIGGER_TEMPLATE.format(schema=db_schema,
                                       table_name=table_name,
                                       trigger_name=trigger_name,
