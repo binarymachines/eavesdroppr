@@ -1,10 +1,11 @@
 # initfile for eavesdroppr PGSQL event listener
 
 globals:
+        project_directory: $MYPROJECT_HOME
         database_host: 52.202.20.45
         database_name: testbed
         debug: True
-        handler_module: 
+        handler_module: sample_handlers
 
 service_objects:
 

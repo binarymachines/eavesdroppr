@@ -23,7 +23,7 @@ import yaml
 import pgpubsub
 import logging
 from snap import snap, common
-import core
+from eavesdroppr import core
 
 SUPPORTED_DB_OPS = ['INSERT', 'UPDATE']
 
@@ -48,10 +48,6 @@ def main(args):
         print '\n'.join(yaml_config['channels'].keys())
         return 0
 
-    
-
-
-    
     channel_id = args['<event_channel>']
     if not yaml_config['channels'].get(channel_id):
         raise eavesdroppr.NoSuchEventChannel(channel_id)
@@ -59,9 +55,9 @@ def main(args):
     channel_config = yaml_config['channels'][channel_id]
 
     if args['--generate']:
-        core.generate_code(channel_config, args)
+        core.generate_code(channel_config, **args)
     else:
-        core.listen(channel_id, yaml_config, args)
+        core.listen(channel_id, yaml_config, **args)
     
         
 if __name__ == '__main__':

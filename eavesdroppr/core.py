@@ -1,5 +1,10 @@
 #!/usr/bin/env python
 
+import os, sys
+import pgpubsub
+from snap import common
+
+
 
 class NoSuchEventChannel(Exception):
     def __init__(self, channel_id):
@@ -52,7 +57,7 @@ def generate_code(channel_name, channel_config, **kwargs):
                                       db_op=operation)
 
 
-def listen(yaml_config, **kwargs):
+def listen(channel_id, yaml_config, **kwargs):
     local_env = common.LocalEnvironment('PGSQL_USER', 'PGSQL_PASSWORD')
     local_env.init()
 
@@ -67,13 +72,13 @@ def listen(yaml_config, **kwargs):
                               database=db_name)
     handler_module_name = yaml_config['globals']['handler_module']
 
-    project_dir = common.load_config_var(yaml_config['globals']['project_dir'])
+    project_dir = common.load_config_var(yaml_config['globals']['project_directory'])
     sys.path.append(project_dir)
     handlers = __import__(handler_module_name)
     handler_function_name = yaml_config['channels'][channel_id]['handler_function']
     
     if not hasattr(handlers, handler_function_name):
-        raise core.NoSuchEventHandler(handler_function_name, handler_module_name)
+        raise NoSuchEventHandler(handler_function_name, handler_module_name)
 
     handler_function = getattr(handlers, handler_function_name)
     service_objects = common.ServiceObjectRegistry(snap.initialize_services(yaml_config, logger))
