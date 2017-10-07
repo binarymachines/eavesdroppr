@@ -6,6 +6,7 @@ from snap import snap, common
 from code_templates import *
 import logging
 import jinja2
+import json
 
 
 SUPPORTED_DB_OPS = ['INSERT', 'UPDATE']
@@ -18,12 +19,15 @@ logger = logging.getLogger('eavesdroppr')
 class NoSuchEventChannel(Exception):
     def __init__(self, channel_id):
         Exception.__init__(self,
-                           'No event channel registered under the name "%s". Please check your initfile.' % channel_id)
+                           'No event channel registered under the name "%s". Please check your initfile.' \
+                           % channel_id)
 
 
 class NoSuchEventHandler(Exception):
     def __init__(self, handler_func_name, handler_module):
-        Exception.__init__(self, 'No event handler function "%s" exists in handler module "%s". Please check your initfile and code modules.' % (handler_func_name, handler_module))
+        Exception.__init__(self,
+                           'No event handler function "%s" exists in event handler module "%s".' \
+                           % (handler_func_name, handler_module))
 
 
 class UnsupportedDBOperation(Exception):
@@ -68,6 +72,10 @@ def generate_code(event_channel, channel_config, **kwargs):
                                       db_op=operation)
 
 
+def default_event_handler(event, svc_object_registry):
+    print common.jsonpretty(json.loads(event.payload))
+    
+        
 def listen(channel_id, yaml_config, **kwargs):
     local_env = common.LocalEnvironment('PGSQL_USER', 'PGSQL_PASSWORD')
     local_env.init()
@@ -86,18 +94,23 @@ def listen(channel_id, yaml_config, **kwargs):
     project_dir = common.load_config_var(yaml_config['globals']['project_directory'])
     sys.path.append(project_dir)
     handlers = __import__(handler_module_name)
-    handler_function_name = yaml_config['channels'][channel_id]['handler_function']
+    handler_function_name = yaml_config['channels'][channel_id].get('handler_function') or 'default_handler'
     
-    if not hasattr(handlers, handler_function_name):
-        raise NoSuchEventHandler(handler_function_name, handler_module_name)
+    if handler_function_name != 'default_handler':
+        if not hasattr(handlers, handler_function_name):
+            raise NoSuchEventHandler(handler_function_name, handler_module_name)
 
-    handler_function = getattr(handlers, handler_function_name)
+        handler_function = getattr(handlers, handler_function_name)
+    else:
+        handler_function = default_event_handler
+            
     service_objects = common.ServiceObjectRegistry(snap.initialize_services(yaml_config, logger))
     
     pubsub.listen(channel_id)
     print 'listening on channel "%s"...' % channel_id
-    for event in pubsub.events():        
-        print event.payload
+    for event in pubsub.events():
+        handler_function(event, service_objects)
+
     
 
 

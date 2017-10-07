@@ -12,7 +12,7 @@ service_objects:
 
 channels:
         ch_table_insert:
-                handler_function: handle_instructors_insert
+                handler_function:
                 db_table_name: instructors
                 db_operation: INSERT
                 pk_field_name: id
