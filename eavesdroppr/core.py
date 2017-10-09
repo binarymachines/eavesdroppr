@@ -80,7 +80,7 @@ def default_proc_name(table_name, operation):
 def default_trigger_name(table_name, operation):
     return 'trg_%s_%s' % (table_name, operation.lower())
 
-        
+
 def generate_code(event_channel, channel_config, **kwargs):
     operation = channel_config['db_operation']
     if not operation in SUPPORTED_DB_OPS:
@@ -89,17 +89,17 @@ def generate_code(event_channel, channel_config, **kwargs):
     table_name = channel_config['db_table_name']
     db_schema = channel_config.get('db_schema') or 'public'
     procedure_name = channel_config.get('db_proc_name') or default_proc_name(table_name, operation)
-    trigger_name = channel_config.get('db_trigger_name') or default_trigger_name(table_name, operation) 
+    trigger_name = channel_config.get('db_trigger_name') or default_trigger_name(table_name, operation)
     source_fields = channel_config['payload_fields']
     primary_key_field = channel_config['pk_field_name']
     primary_key_type = channel_config['pk_field_type']
-    
+
     j2env = jinja2.Environment()
-    template_mgr = common.JinjaTemplateManager(j2env)        
+    template_mgr = common.JinjaTemplateManager(j2env)
     json_func_template = j2env.from_string(JSON_BUILD_FUNC_TEMPLATE)
     json_func = json_func_template.render(payload_fields=source_fields,
                                           pk_field=primary_key_field)
-    
+
     if kwargs['procedure']:
         print PROC_TEMPLATE.format(schema=db_schema,
                                    proc_name=procedure_name,
@@ -120,7 +120,7 @@ def default_event_handler(event, svc_object_registry):
     print common.jsonpretty(json.loads(event.payload))
     
 
-    
+
 def listen(channel_id, yaml_config, **kwargs):
     local_env = common.LocalEnvironment('PGSQL_USER', 'PGSQL_PASSWORD')
     local_env.init()
@@ -129,7 +129,7 @@ def listen(channel_id, yaml_config, **kwargs):
     pgsql_password = local_env.get_variable('PGSQL_PASSWORD')
     db_host = yaml_config['globals']['database_host']
     db_name = yaml_config['globals']['database_name']
-    
+
     pubsub = pgpubsub.connect(host=db_host,
                               user=pgsql_user,
                               password=pgsql_password,
@@ -140,7 +140,7 @@ def listen(channel_id, yaml_config, **kwargs):
     sys.path.append(project_dir)
     handlers = __import__(handler_module_name)
     handler_function_name = yaml_config['channels'][channel_id].get('handler_function') or 'default_handler'
-    
+
     if handler_function_name != 'default_handler':
         if not hasattr(handlers, handler_function_name):
             raise NoSuchEventHandler(handler_function_name, handler_module_name)
@@ -148,9 +148,9 @@ def listen(channel_id, yaml_config, **kwargs):
         handler_function = getattr(handlers, handler_function_name)
     else:
         handler_function = default_event_handler
-            
+
     service_objects = common.ServiceObjectRegistry(snap.initialize_services(yaml_config, logger))
-    
+
     pubsub.listen(channel_id)
     print 'listening on channel "%s"...' % channel_id
     for event in pubsub.events():
@@ -163,7 +163,7 @@ class EavesdropCLI(Cmd):
         kwreader = common.KeywordArgReader(*[])
         kwreader.read(**kwargs)
         Cmd.__init__(self)
-        self.prompt = '[eavesdrop_cli]> ' 
+        self.prompt = '[eavesdrop_cli]> '
 
         self.global_settings = kwreader.get_value('globals') or []
         self.channels = kwreader.get_value('channels') or []
@@ -173,7 +173,8 @@ class EavesdropCLI(Cmd):
     def create_channel(self, channel_name, **kwargs):
         print 'stub create channel function'
         print common.jsonpretty(kwargs)
-        
+        return ChannelMeta(channel_name, **kwargs)
+
 
     def prompt_for_payload_fields(self, channel_name):
         print '+++ adding payload fields'
@@ -184,7 +185,7 @@ class EavesdropCLI(Cmd):
                 fields.append(new_field)
                 should_continue = cli.InputPrompt('add another [Y/n]?', 'y').show()
                 if should_continue == 'y':
-                    continue            
+                    continue 
             break
 
         print '+++ payload fields:\n-%s \n+++ added to event channel "%s".' % ('\n-'.join(fields), channel_name)
@@ -215,7 +216,7 @@ class EavesdropCLI(Cmd):
             
         while True:
             channel_params = {
-                'handler_func': None,
+                'handler_function': None,
                 'schema': None,
                 'table_name': None,
                 'operation': None,
@@ -251,7 +252,7 @@ class EavesdropCLI(Cmd):
 
             channel_params['payload_fields'] = self.prompt_for_payload_fields(channel_name)
 
-            channel_params['handler_func'] = cli.InputPrompt('handler function').show()
+            channel_params['handler_function'] = cli.InputPrompt('handler function').show()
             channel_params['procedure_name'] = cli.InputPrompt('stored procedure name',
                                                                default_proc_name(channel_params['table_name'],
                                                                                  channel_params['operation'])).show()
@@ -264,7 +265,7 @@ class EavesdropCLI(Cmd):
                 self.channels.append(new_channel)
                 
                 should_continue = cli.InputPrompt('create another channel [Y/n]?', 'y').show()
-                if should_continue.lower() == y:
+                if should_continue.lower() == 'y':
                     continue                
             break
         
