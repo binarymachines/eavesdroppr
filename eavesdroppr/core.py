@@ -5,11 +5,13 @@ import pgpubsub
 from snap import snap, common
 from snap import cli_tools as cli
 from code_templates import *
+from metaobjects import *
 import logging
 import jinja2
 import json
 from cmd import Cmd
 from docopt import docopt as docopt_func
+from docopt import DocoptExit
 
 
 
@@ -165,10 +167,12 @@ class EavesdropCLI(Cmd):
         Cmd.__init__(self)
         self.prompt = '[eavesdrop_cli]> '
 
-        self.global_settings = kwreader.get_value('globals') or []
+        globals = kwreader.get_value('globals') or {}
+        self.global_settings = GlobalSettingsMeta(**globals)
         self.channels = kwreader.get_value('channels') or []
         self.service_objects = kwreader.get_value('service_objects') or []
 
+    
 
     def create_channel(self, channel_name, **kwargs):
         print 'stub create channel function'
@@ -192,8 +196,7 @@ class EavesdropCLI(Cmd):
         return fields
 
 
-    @docopt_cmd
-    def do_quit(self, cmd_args):
+    def do_quit(self, arg):
         print 'eavesdrop interactive mode exiting.'
         raise SystemExit
 
@@ -203,12 +206,51 @@ class EavesdropCLI(Cmd):
 
 
     @docopt_cmd
-    def do_mkchannel(self, cmd_args):
-        '''Usage: mkchannel [channel_name]
+    def do_globals(self, arg):
+        '''Usage:
+                    globals [update]
+                    globals set <setting_name>
+                    globals set <setting_name> <setting_value>
         '''
 
-        if cmd_args.get('channel_name'):
-            channel_name = cmd_args['channel_name']
+        setting_name = arg.get('<setting_name>')
+        if arg['update']:
+            self.edit_global_settings()
+        elif arg['set']:
+            value = arg.get('<setting_value>')
+
+            if value is None:
+                self.edit_global_setting(setting_name)
+            else:
+                if not setting_name in self.global_settings.data().keys():
+                    print "Available global settings are: "
+                    print '\n'.join(['- %s' % (k) for k in self.global_settings.data().keys()])
+                    return
+
+                attr_name = 'set_%s' % setting_name
+                setter_func = getattr(self.global_settings, attr_name)
+                self.global_settings = setter_func(value)
+
+        else:
+            self.show_global_settings()
+    
+
+    @docopt_cmd
+    def do_list(self, arg):
+        '''Usage: lschannel'''
+
+        print '+++ Event channels:'
+        print '\n'.join([c.name for c in self.channels])
+        
+    
+    @docopt_cmd
+    def do_mkchannel(self, arg):
+        '''Usage: mkchannel
+                  mkchannel <channel_name>
+        '''
+
+        if arg.get('<channel_name>'):
+            channel_name = arg['<channel_name>']
         else:
             channel_name = cli.InputPrompt('event channel name').show()
             if not channel_name:
