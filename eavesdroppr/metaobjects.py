@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from snap import common
+import copy
 
 
 REQUIRED_CHANNEL_FIELDS = ['handler_function',
@@ -16,6 +17,92 @@ REQUIRED_GLOBAL_FIELDS = ['project_directory',
                           'database_name',
                           'debug',
                           'handler_module']
+
+
+
+class ServiceObjectMeta(object):
+    def __init__(self, name, class_name, **kwargs):
+        self._name = name
+        self._classname = class_name
+        self._init_params = []
+        for param_name, param_value in kwargs.iteritems():
+            self._init_params.append({'name': param_name, 'value': param_value})
+
+
+    @property
+    def name(self):
+        return self._name
+
+
+    @property
+    def classname(self):
+        return self._classname
+
+
+    @property
+    def init_params(self):
+        return self._init_params
+
+
+    def _params_to_dict(self, param_array):
+        result = {}
+        for p in param_array:
+            result[p['name']] = p['value']
+        return result
+
+
+    def find_param_by_name(self, param_name):
+        param = None
+        for p in self._init_params:
+            if p['name'] == param_name:
+                param = p
+                break
+        return param
+
+
+    def set_name(self, name):
+        return ServiceObjectMeta(name, self._classname, **self._params_to_dict(self._init_params))
+
+
+    def set_classname(self, classname):
+        return ServiceObjectMeta(self._name, classname, **self._params_to_dict(self._init_params))
+
+
+    def add_param(self, name, value):
+        new_param_list = copy.deepcopy(self._init_params)
+        new_param_list.append({'name': name, 'value': value})
+        params = self._params_to_dict(new_param_list)
+
+        return ServiceObjectMeta(self._name, self._classname, **params)
+
+
+    def add_params(self, **kwargs):
+        updated_so = self
+        for name, value in kwargs.iteritems():
+            updated_so = updated_so.add_param(name, value)
+        return updated_so
+
+
+    def remove_param(self, name):
+        param = self.find_param_by_name(name)
+        if not param:
+            return self
+
+        new_param_list = copy.deepcopy(self._init_params)
+        new_param_list.remove(param)
+        params = {}
+        for p in new_param_list:
+            params[p['name']] = p['value']
+
+        return ServiceObjectMeta(self._name, self._classname, **params)
+
+
+    def data(self):
+        result = {'name': self._name,
+                  'class': self._classname,
+                  'init_params': self._init_params}
+        return result
+
 
 
 class GlobalSettingsMeta(object):

@@ -86,7 +86,7 @@ def default_trigger_name(table_name, operation):
 def generate_code(event_channel, channel_config, **kwargs):
     operation = channel_config['db_operation']
     if not operation in SUPPORTED_DB_OPS:
-        raise eavesdroppr.UnsupportedDBOperation(operation)
+        raise UnsupportedDBOperation(operation)
 
     table_name = channel_config['db_table_name']
     db_schema = channel_config.get('db_schema') or 'public'
@@ -172,7 +172,43 @@ class EavesdropCLI(Cmd):
         self.channels = kwreader.get_value('channels') or []
         self.service_objects = kwreader.get_value('service_objects') or []
 
-    
+
+    def find_channel(self, name):
+        result = None
+        for s in self.channels:
+            if s.name == name:
+                result = s
+                break
+
+        return result
+
+
+    def get_channel_index(self, name):
+        result = -1
+        for i in range(0, len(self.channels)):
+            if self.channels[i].name == name:
+                result = i
+                break
+        return result
+
+
+    def find_service_object(self, name):
+        result = None
+        for so in self.service_objects:
+            if so.name == name:
+                result = so
+                break
+        return result
+
+
+    def get_service_object_index(self, name):
+        result = -1
+        for i in range(0, len(self.service_objects)):
+            if self.service_objects[i].name == name:
+                result = i
+                break
+        return result
+
 
     def create_channel(self, channel_name, **kwargs):
         print 'stub create channel function'
@@ -189,10 +225,11 @@ class EavesdropCLI(Cmd):
                 fields.append(new_field)
                 should_continue = cli.InputPrompt('add another [Y/n]?', 'y').show()
                 if should_continue == 'y':
-                    continue 
+                    continue
             break
 
-        print '+++ payload fields:\n-%s \n+++ added to event channel "%s".' % ('\n-'.join(fields), channel_name)
+        print '+++ payload fields:\n-%s \n+++ added to event channel "%s".' \
+            % ('\n-'.join(fields), channel_name)
         return fields
 
 
@@ -203,6 +240,72 @@ class EavesdropCLI(Cmd):
 
     do_q = do_quit
     do_exit = do_quit
+
+
+    def show_global_settings(self):
+        print common.jsonpretty(self.global_settings.data())
+
+
+    def edit_global_settings(self):
+        print '+++ updating eavesdrop settings...'
+        settings_menu = []
+        defaults = self.global_settings.current_values
+        for key, value in defaults.iteritems():
+            settings_menu.append({'label': key, 'value': key})
+
+        while True:
+            setting_name = cli.MenuPrompt('global setting to update', settings_menu).show()
+            if not setting_name:
+                break
+            setting_value = cli.InputPrompt(setting_name, defaults[setting_name]).show()
+
+            attr_name = 'set_%s' % setting_name
+            setter_func = getattr(self.global_settings, attr_name)
+            self.global_settings = setter_func(setting_value)
+
+            should_continue = cli.InputPrompt('update another (Y/n)?', 'y').show()
+            if should_continue.lower() != 'y':
+                break
+
+
+    def edit_global_setting(self, setting_name):
+        if not setting_name in self.global_settings.current_values.keys():
+            print "!! No such global setting. Available global settings are: "
+            print '\n'.join(['- %s' % (k) for k in self.global_settings.data().keys()])
+            return
+
+        defaults = self.global_settings.current_values
+        setting_value = cli.InputPrompt(setting_name, defaults[setting_name]).show()
+        attr_name = 'set_%s' % setting_name
+        setter_func = getattr(self.global_settings, attr_name)
+        self.global_settings = setter_func(setting_value)
+
+
+    def create_service_object_params(self):
+        so_params = {}
+        while True:
+            param_name = cli.InputPrompt('parameter name').show()
+            if not param_name:
+                break
+            param_value = cli.InputPrompt('parameter value').show()
+            if not param_value:
+                break
+
+            so_params[param_name] = param_value
+
+            should_continue = cli.InputPrompt('add another parameter (Y/n)?', 'y').show()
+            if should_continue.lower() != 'y':
+                break
+
+        return so_params
+
+
+    def make_svcobject(self, name):
+        print '+++ Register new service object'
+        so_name = name or cli.InputPrompt('service object name').show()
+        so_classname = cli.InputPrompt('service object class').show()
+        so_params = self.create_service_object_params()
+        self.service_objects.append(ServiceObjectMeta(so_name, so_classname, **so_params))
 
 
     @docopt_cmd
@@ -233,29 +336,37 @@ class EavesdropCLI(Cmd):
 
         else:
             self.show_global_settings()
-    
+
+
+    def list_channels(self):
+        print '+++ Event channels:'
+        print '\n'.join([c.name for c in self.channels])
+
+
+    def list_svcobjects(self):
+        print '+++ Service objects:'
+        print '\n'.join([so.name for so in self.service_objects])
+
 
     @docopt_cmd
     def do_list(self, arg):
-        '''Usage: lschannel'''
+        '''Usage: list (channels | svcobjs )'''
 
-        print '+++ Event channels:'
-        print '\n'.join([c.name for c in self.channels])
-        
-    
-    @docopt_cmd
-    def do_mkchannel(self, arg):
-        '''Usage: mkchannel
-                  mkchannel <channel_name>
-        '''
+        if arg['channels']:
+            self.list_channels()
+        elif arg['svcobjs']:
+            self.list_svcobjects()
 
-        if arg.get('<channel_name>'):
-            channel_name = arg['<channel_name>']
-        else:
-            channel_name = cli.InputPrompt('event channel name').show()
-            if not channel_name:
-                return
-            
+
+
+    def complete_list(self, text, line, begidx, endidx):
+        LIST_OPTIONS = ('channels', 'svcobjs')
+        return [i for i in LIST_OPTIONS if i.startswith(text)]
+
+
+
+    def make_channel(self, channel_name):
+
         while True:
             channel_params = {
                 'handler_function': None,
@@ -269,7 +380,7 @@ class EavesdropCLI(Cmd):
                 'payload_fields': []
             }
             missing_params = 4 # some of the channel parameters are optional
-            
+
             channel_params['table_name'] = cli.InputPrompt('table name').show()
             if not channel_params['table_name']:
                 break
@@ -301,16 +412,74 @@ class EavesdropCLI(Cmd):
             channel_params['trigger_name'] = cli.InputPrompt('trigger name',
                                                              default_trigger_name(channel_params['table_name'],
                                                                                   channel_params['operation'])).show()
-            
+
             if not missing_params:
                 new_channel = self.create_channel(channel_name, **channel_params)
                 self.channels.append(new_channel)
-                
+
                 should_continue = cli.InputPrompt('create another channel [Y/n]?', 'y').show()
                 if should_continue.lower() == 'y':
                     continue                
             break
+
+
+    @docopt_cmd
+    def do_make(self, cmd_args):
+        '''Usage:
+                make (channel | svcobj)
+                make channel <name>
+                make svcobj <name>
+        '''
+
+        object_name = cmd_args.get('<name>')
+
+        if cmd_args['channel']:
+            channel_name = object_name or cli.InputPrompt('event channel name').show()
+            if not channel_name:
+                return
+            self.make_channel(channel_name)
+        elif cmd_args['svcobj']:
+
+            svcobject_name = object_name or cli.InputPrompt('service object name').show()
+            if not svcobject_name:
+                return 
+            self.make_svcobject(svcobject_name)
+
+
+
+    def complete_make(self, text, line, begidx, endidx):
+        MAKE_OPTIONS = ('channel', 'svcobj')
+        return [i for i in MAKE_OPTIONS if i.startswith(text)]
         
     
-        
-    
+    @docopt_cmd
+    def do_edit(self, arg):
+        '''Usage:
+                    edit (channel | svcobj)
+                    edit channel <name>
+                    edit svcobj <name>
+        '''
+        object_name = arg.get('<name>')
+
+        if arg['channel']:
+            if not len(self.channels):
+                print 'You have not created any Event Channels yet.'
+                return
+            channel_name = object_name or self.select_channel()
+            if not channel_name:
+                return
+            self.edit_channel(channel_name)
+
+        elif arg['svcobj']:
+            if not len(self.service_objects):
+                print 'You have not created any ServiceObjects yet.'
+                return
+            svcobj_name = object_name or self.select_service_object()
+            if not svcobj_name:
+                return
+            self.eit_svcobject(svcobj_name)
+
+
+    def complete_edit(self, text, line, begidx, endidx):
+        EDIT_OPTIONS = ('channel', 'svcobj')
+        return [i for i in EDIT_OPTIONS if i.startswith(text)]
