@@ -129,8 +129,8 @@ class GlobalSettingsMeta(object):
 
     def data(self):
         return self.current_values
-    
-    
+
+
 
 
 class ChannelMeta(object):
@@ -141,8 +141,23 @@ class ChannelMeta(object):
         self._data = kwargs
 
 
+    def rename(self, new_name):
+        new_data = copy.deepcopy(self._data)
+        return ChannelMeta(new_name, **new_data)
+
+
+    def set_property(self, name, value):
+        new_data = copy.deepcopy(self._data)
+        new_data[name] = value
+        return ChannelMeta(self.name, **new_data)
+
+
+    def property_names(self):
+        return self._data.keys()
+
+
     @property
-    def handler_func(self):
+    def handler_function(self):
         return self._data['handler_function']
 
 
@@ -169,7 +184,7 @@ class ChannelMeta(object):
     def primary_key_type(self):
         return self._data['primary_key_type']
 
-        
+
     @property
     def procedure_name(self):
         return self._data['procedure_name']
@@ -178,9 +193,12 @@ class ChannelMeta(object):
     @property
     def trigger_name(self):
         return self._data.get('trigger_name')
-    
-    
+
+
     @property
     def payload_fields(self):
         return self._data['payload_fields']
-    
+
+
+    def data(self):
+        return self._data

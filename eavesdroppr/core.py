@@ -5,6 +5,7 @@ import pgpubsub
 from snap import snap, common
 from snap import cli_tools as cli
 from code_templates import *
+from config_templates import *
 from metaobjects import *
 import logging
 import jinja2
@@ -91,7 +92,8 @@ def generate_code(event_channel, channel_config, **kwargs):
     table_name = channel_config['db_table_name']
     db_schema = channel_config.get('db_schema') or 'public'
     procedure_name = channel_config.get('db_proc_name') or default_proc_name(table_name, operation)
-    trigger_name = channel_config.get('db_trigger_name') or default_trigger_name(table_name, operation)
+    trigger_name = channel_config.get('db_trigger_name') or default_trigger_name(table_name,
+                                                                                 operation)
     source_fields = channel_config['payload_fields']
     primary_key_field = channel_config['pk_field_name']
     primary_key_type = channel_config['pk_field_type']
@@ -120,7 +122,6 @@ def generate_code(event_channel, channel_config, **kwargs):
 
 def default_event_handler(event, svc_object_registry):
     print common.jsonpretty(json.loads(event.payload))
-    
 
 
 def listen(channel_id, yaml_config, **kwargs):
@@ -160,6 +161,25 @@ def listen(channel_id, yaml_config, **kwargs):
 
 
 
+class EavesdropConfigWriter(object):
+
+    def __init__(self):
+        pass
+
+
+    def write(self, **kwargs):
+        kwreader = common.KeywordArgReader('settings',
+                                           'channels')
+
+        kwreader.read(**kwargs)
+        j2env = jinja2.Environment()
+        template = j2env.from_string(INIT_FILE)
+        return template.render(global_settings=kwreader.get_value('settings'),
+                               channels=kwreader.get_value('channels') or [],
+                               service_objects=kwargs.get('services', []))
+
+
+
 class EavesdropCLI(Cmd):
     def __init__(self, **kwargs):
         kwreader = common.KeywordArgReader(*[])
@@ -192,6 +212,86 @@ class EavesdropCLI(Cmd):
         return result
 
 
+    def select_channel(self):
+        options = [{'value': c.name, 'label': c.name} for c in self.channels]
+        return cli.MenuPrompt('select event channel', options).show()
+
+
+    def create_channel(self, channel_name, **kwargs):
+        print 'stub create channel function'
+        print common.jsonpretty(kwargs)
+        return ChannelMeta(channel_name, **kwargs)
+
+
+    def edit_channel(self, name):
+        print '+++ Updating event channel'
+        channel_index = self.get_channel_index(name)
+        if channel_index < 0:
+            print 'No event channel registered under the name %s.' % name
+            return
+
+        current_channel = self.channels[channel_index]
+        '''
+        channel_name = cli.InputPrompt('change name to', current_channel.name).show()
+        self.channels[channel_index] = current_channel.rename(channel_name)
+        '''
+
+        while True:
+            property_options = [{'value': pn, 'label': pn} for pn in current_channel.property_names()]
+            target_property_name = cli.MenuPrompt('event channel property to update', property_options).show()
+
+            if target_property_name == 'handler_function':
+                handler_func = cli.InputPrompt('change handler function to',
+                                               current_channel.handler_function).show()
+                self.channels[channel_index] = current_channel.set_property('handler_function',
+                                                                            handler_func)
+
+            elif target_property_name == 'table_name':
+                db_table_name = cli.InputPrompt('change table name to',
+                                                current_channel.table_name).show()
+                self.channels[channel_index] = current_channel.set_property('table_name',
+                                                                            db_table_name)
+
+            elif target_property_name == 'operation':
+                db_operation = cli.InputPrompt('change operation to',
+                                               current_channel.operation).show()
+                self.channels[channel_index] = current_channel.set_property('operation',
+                                                                            db_operation)
+
+            elif target_property_name == 'primary_key_field':
+                pk_field = cli.InputPrompt('change primary key field to',
+                                           current_channel.primary_key_field).show()
+                self.channels[channel_index] = current_channel.set_property('primary_key_field',
+                                                                            pk_field)
+
+            elif target_property_name == 'primary_key_type':
+                pk_type = cli.InputPrompt('change primary key type to',
+                                          current_channel.primary_key_type).show()
+                self.channels[channel_index] = current_channel.set_property('primary_key_type',
+                                                                            pk_type)
+
+            elif target_property_name == 'schema':
+                db_schema = cli.InputPrompt('change schema to',
+                                            current_channel.schema).show()
+                self.channels[channel_index] = current_channel.set_property('schema', db_schema)
+
+            elif target_property_name == 'procedure_name':
+                procname = cli.InputPrompt('change stored procedure name to',
+                                           current_channel.procedure_name).show()
+                self.channels[channel_index] = current_channel.set_property('procedure_name',
+                                                                            procname)
+
+            elif target_property_name == 'trigger_name':
+                trigger = cli.InputPrompt('change trigger name to',
+                                          current_channel.trigger_name).show()
+                self.channels[channel_index] = current_channel.set_property('trigger_name', trigger)
+
+            should_continue = cli.InputPrompt('edit another property (Y/n)?', 'y').show()
+            if should_continue == 'y':
+                continue
+            break
+
+
     def find_service_object(self, name):
         result = None
         for so in self.service_objects:
@@ -210,10 +310,9 @@ class EavesdropCLI(Cmd):
         return result
 
 
-    def create_channel(self, channel_name, **kwargs):
-        print 'stub create channel function'
-        print common.jsonpretty(kwargs)
-        return ChannelMeta(channel_name, **kwargs)
+    def select_service_object(self):
+        options = [{'value': so.name, 'label': so.name} for so in self.service_objects]
+        return cli.MenuPrompt('select service object', options).show()
 
 
     def prompt_for_payload_fields(self, channel_name):
@@ -308,6 +407,49 @@ class EavesdropCLI(Cmd):
         self.service_objects.append(ServiceObjectMeta(so_name, so_classname, **so_params))
 
 
+
+    def show_svcobject(self, name):
+        index = self.get_service_object_index(name)
+        if index < 0:
+            print '> No service object registered under the name %s.' % name
+            return
+        print common.jsonpretty(self.service_objects[index].data())
+
+
+    def edit_svcobject(self, so_name):
+        print '+++ Updating service object'
+        so_index = self.get_service_object_index(so_name)
+        if so_index < 0:
+            print 'No service object registered under the name %s.' % so_name
+            return
+
+        current_so = self.service_objects[so_index]
+        so_name = cli.InputPrompt('change name to', current_so.name).show()
+        self.service_objects[so_index] = current_so.set_name(so_name)
+        current_so = self.service_objects[so_index]
+
+        so_classname = cli.InputPrompt('change class to', current_so.classname).show()
+        self.service_objects[so_index] = current_so.set_classname(so_classname)
+        current_so = self.service_objects[so_index]
+
+        operation = cli.MenuPrompt('select service object operation', CHSO_OPTIONS).show()
+        if operation == 'add_params':
+            new_params = self.create_service_object_params()
+            self.service_objects[so_index] = current_so.add_params(**new_params)
+            current_so = self.service_objects[so_index]
+
+        if operation == 'remove_params':
+            while True:
+                param_menu = [{'label': p['name'], 'value': p['name']} for p in current_so.init_params]
+                param_name = cli.MenuPrompt('select param to remove', param_menu).show()
+                self.service_objects[so_index] = current_so.remove_param(param_name)
+                current_so = self.service_objects[so_index]
+
+                should_continue = cli.InputPrompt('remove another (y/n)?', 'Y').show()
+                if should_continue.lower() != 'y':
+                    break
+
+
     @docopt_cmd
     def do_globals(self, arg):
         '''Usage:
@@ -341,6 +483,14 @@ class EavesdropCLI(Cmd):
     def list_channels(self):
         print '+++ Event channels:'
         print '\n'.join([c.name for c in self.channels])
+
+
+    def show_channel(self, name):
+        index = self.get_channel_index(name)
+        if index < 0:
+            print '> No event channel registered under the name %s.' % name
+            return
+        print common.jsonpretty(self.channels[index].data())
 
 
     def list_svcobjects(self):
@@ -442,7 +592,7 @@ class EavesdropCLI(Cmd):
 
             svcobject_name = object_name or cli.InputPrompt('service object name').show()
             if not svcobject_name:
-                return 
+                return
             self.make_svcobject(svcobject_name)
 
 
@@ -450,8 +600,8 @@ class EavesdropCLI(Cmd):
     def complete_make(self, text, line, begidx, endidx):
         MAKE_OPTIONS = ('channel', 'svcobj')
         return [i for i in MAKE_OPTIONS if i.startswith(text)]
-        
-    
+
+
     @docopt_cmd
     def do_edit(self, arg):
         '''Usage:
@@ -477,9 +627,63 @@ class EavesdropCLI(Cmd):
             svcobj_name = object_name or self.select_service_object()
             if not svcobj_name:
                 return
-            self.eit_svcobject(svcobj_name)
+            self.edit_svcobject(svcobj_name)
 
 
     def complete_edit(self, text, line, begidx, endidx):
         EDIT_OPTIONS = ('channel', 'svcobj')
         return [i for i in EDIT_OPTIONS if i.startswith(text)]
+
+
+    @docopt_cmd
+    def do_show(self, cmd_args):
+        '''Usage:
+                  show (channel | svcobj)
+                  show channel <name>
+                  show svcobj <name>
+        '''
+
+        object_name = cmd_args.get('<name>')
+
+        if cmd_args['channel']:
+            if object_name:
+                self.show_channel(object_name)
+            else:
+                print 'Available Event Channels:'
+                self.list_channels()
+        elif cmd_args['svcobj']:
+            if object_name:
+                self.show_svcobject(object_name)
+            else:
+                print 'Available ServiceObjects:'
+                self.list_svcobjects()
+
+
+
+    def complete_show(self, text, line, begidx, endidx):
+        SHOW_OPTIONS = ('transform', 'shape', 'svcobj')
+        return [i for i in SHOW_OPTIONS if i.startswith(text)]
+
+
+    def get_save_condition(self):
+        if not len(self.channels):
+            return 'to save or preview, you must create at least one channel.'
+        return 'ok'
+
+
+    def yaml_config(self):
+        cwriter = EavesdropConfigWriter()
+        config = cwriter.write(settings=self.global_settings,
+                               channels=self.channels,
+                               services=self.service_objects)
+        return config
+
+
+    def do_preview(self, arg):
+        '''display current configuration in YAML format'''
+
+        message = self.get_save_condition()
+        if message == 'ok':
+            print self.yaml_config()
+        else:
+            print message
