@@ -222,4 +222,13 @@ class ChannelMeta(object):
 
 
     def data(self):
-        return self._data
+        result = {}
+        for key, value in self._data.iteritems():
+            if key == 'payload_fields':
+                result[key] = []
+                for f in value:
+                    result[key].append(f)
+            else:
+                result[key] = value
+   
+        return result

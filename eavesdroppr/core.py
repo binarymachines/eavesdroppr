@@ -293,7 +293,7 @@ class EavesdropCLI(Cmd):
 
             elif target_property_name == 'payload_fields':
                 while True:
-                    print '+++ editing payload fields for hanneld'
+                    print '+++ editing payload fields for channel "%s"' % current_channel.name
                     action_options = [{'value': 'add', 'label': 'add payload field'},
                                       {'value': 'delete', 'label': 'delete payload field'}]
                     action = cli.MenuPrompt('action to perform', action_options).show()
