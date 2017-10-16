@@ -138,7 +138,15 @@ class ChannelMeta(object):
         kwreader = common.KeywordArgReader(*REQUIRED_CHANNEL_FIELDS)
         kwreader.read(**kwargs)
         self.name = name
-        self._data = kwargs
+        self._data = {}
+        for key, value in kwargs.iteritems():
+            if key == 'payload_fields':
+                self._data[key] = set()
+                # here we know that value is actually a collection
+                for field in value:
+                    self._data[key].add(field)
+            else:
+                self._data[key] = value
 
 
     def rename(self, new_name):
@@ -198,6 +206,19 @@ class ChannelMeta(object):
     @property
     def payload_fields(self):
         return self._data['payload_fields']
+
+
+    def add_payload_fields(self, *fields):
+        new_data = copy.deepcopy(self._data)
+        for field in fields:
+            new_data['payload_fields'].add(field)
+        return ChannelMeta(self.name, **new_data)
+
+
+    def delete_payload_field(self, field):
+        new_data = copy.deepcopy(self._data)
+        new_data['payload_fields'].discard(field)
+        return ChannelMeta(self.name, **new_data)
 
 
     def data(self):

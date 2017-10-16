@@ -223,6 +223,10 @@ class EavesdropCLI(Cmd):
         return ChannelMeta(channel_name, **kwargs)
 
 
+    def update_payload_fields(self, field_array):
+        pass
+
+
     def edit_channel(self, name):
         print '+++ Updating event channel'
         channel_index = self.get_channel_index(name)
@@ -238,7 +242,8 @@ class EavesdropCLI(Cmd):
 
         while True:
             property_options = [{'value': pn, 'label': pn} for pn in current_channel.property_names()]
-            target_property_name = cli.MenuPrompt('event channel property to update', property_options).show()
+            target_property_name = cli.MenuPrompt('event channel property to update',
+                                                  property_options).show()
 
             if target_property_name == 'handler_function':
                 handler_func = cli.InputPrompt('change handler function to',
@@ -286,7 +291,36 @@ class EavesdropCLI(Cmd):
                                           current_channel.trigger_name).show()
                 self.channels[channel_index] = current_channel.set_property('trigger_name', trigger)
 
-            should_continue = cli.InputPrompt('edit another property (Y/n)?', 'y').show()
+            elif target_property_name == 'payload_fields':
+                while True:
+                    print '+++ editing payload fields for hanneld'
+                    action_options = [{'value': 'add', 'label': 'add payload field'},
+                                      {'value': 'delete', 'label': 'delete payload field'}]
+                    action = cli.MenuPrompt('action to perform', action_options).show()
+                    if not action:
+                        break
+
+                    if action == 'add':
+                        new_fields = self.prompt_for_payload_fields(current_channel.name)
+                        num_new_fields = len(new_fields)
+                        if num_new_fields == 0:
+                            print '+++ cancelling edit of payload fields in channel.'
+                            break
+                        self.channels[channel_index] = current_channel.add_payload_fields(*new_fields)
+                        
+                    elif action == 'delete':
+                        field_options = [{'label': f, 'value': f} for f in current_channel.payload_fields]
+                        field = cli.MenuPrompt('field to delete', field_options).show()
+                        if not field:
+                            print '+++ cancelling edit of payload fields in channel.'
+                            break
+                        self.channels[channel_index] = current_channel.delete_payload_field(field)
+
+                    print '+++ channel "%s" now contains payload fields:' % current_channel.name
+                    print '\n'.join(['-%s' % f for f in current_channel.payload_fields])
+
+            should_continue = cli.InputPrompt('edit another event channel property (Y/n)?',
+                                              'y').show()
             if should_continue == 'y':
                 continue
             break
