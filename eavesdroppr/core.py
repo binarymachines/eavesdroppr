@@ -307,7 +307,7 @@ class EavesdropCLI(Cmd):
                             print '+++ cancelling edit of payload fields in channel.'
                             break
                         self.channels[channel_index] = current_channel.add_payload_fields(*new_fields)
-                        
+
                     elif action == 'delete':
                         field_options = [{'label': f, 'value': f} for f in current_channel.payload_fields]
                         field = cli.MenuPrompt('field to delete', field_options).show()
@@ -695,7 +695,7 @@ class EavesdropCLI(Cmd):
 
 
     def complete_show(self, text, line, begidx, endidx):
-        SHOW_OPTIONS = ('transform', 'shape', 'svcobj')
+        SHOW_OPTIONS = ('channel', 'svcobj')
         return [i for i in SHOW_OPTIONS if i.startswith(text)]
 
 

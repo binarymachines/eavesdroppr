@@ -230,5 +230,5 @@ class ChannelMeta(object):
                     result[key].append(f)
             else:
                 result[key] = value
-   
+
         return result
