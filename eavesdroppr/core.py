@@ -58,8 +58,8 @@ def docopt_cmd(func):
             # The DocoptExit is thrown when the args do not match.
             # We print a message to the user and the usage block.
 
-            print '\nPlease specify one or more valid command parameters.'
-            print e
+            print('\nPlease specify one or more valid command parameters.')
+            print(e)
             return
 
         except SystemExit:
@@ -105,23 +105,23 @@ def generate_code(event_channel, channel_config, **kwargs):
                                           pk_field=primary_key_field)
 
     if kwargs['procedure']:
-        print PROC_TEMPLATE.format(schema=db_schema,
+        print(PROC_TEMPLATE.format(schema=db_schema,
                                    proc_name=procedure_name,
                                    pk_field_name=primary_key_field,
                                    pk_field_type=primary_key_type,
                                    channel_name=event_channel,
-                                   json_build_func=json_func)
+                                   json_build_func=json_func))
 
     elif kwargs['trigger']:
-        print TRIGGER_TEMPLATE.format(schema=db_schema,
+        print(TRIGGER_TEMPLATE.format(schema=db_schema,
                                       table_name=table_name,
                                       trigger_name=trigger_name,
                                       db_proc_name=procedure_name,
-                                      db_op=operation)
+                                      db_op=operation))
 
 
 def default_event_handler(event, svc_object_registry):
-    print common.jsonpretty(json.loads(event.payload))
+    print(common.jsonpretty(json.loads(event.payload)))
 
 
 def listen(channel_id, yaml_config, **kwargs):
@@ -155,7 +155,7 @@ def listen(channel_id, yaml_config, **kwargs):
     service_objects = common.ServiceObjectRegistry(snap.initialize_services(yaml_config, logger))
 
     pubsub.listen(channel_id)
-    print 'listening on channel "%s"...' % channel_id
+    print('listening on channel "%s"...' % channel_id)
     for event in pubsub.events():
         handler_function(event, service_objects)
 
@@ -218,8 +218,8 @@ class EavesdropCLI(Cmd):
 
 
     def create_channel(self, channel_name, **kwargs):
-        print 'stub create channel function'
-        print common.jsonpretty(kwargs)
+        print('stub create channel function')
+        print(common.jsonpretty(kwargs))
         return ChannelMeta(channel_name, **kwargs)
 
 
@@ -228,10 +228,10 @@ class EavesdropCLI(Cmd):
 
 
     def edit_channel(self, name):
-        print '+++ Updating event channel'
+        print('+++ Updating event channel')
         channel_index = self.get_channel_index(name)
         if channel_index < 0:
-            print 'No event channel registered under the name %s.' % name
+            print('No event channel registered under the name %s.' % name)
             return
 
         current_channel = self.channels[channel_index]
@@ -293,7 +293,7 @@ class EavesdropCLI(Cmd):
 
             elif target_property_name == 'payload_fields':
                 while True:
-                    print '+++ editing payload fields for channel "%s"' % current_channel.name
+                    print('+++ editing payload fields for channel "%s"' % current_channel.name)
                     action_options = [{'value': 'add', 'label': 'add payload field'},
                                       {'value': 'delete', 'label': 'delete payload field'}]
                     action = cli.MenuPrompt('action to perform', action_options).show()
@@ -304,7 +304,7 @@ class EavesdropCLI(Cmd):
                         new_fields = self.prompt_for_payload_fields(current_channel.name)
                         num_new_fields = len(new_fields)
                         if num_new_fields == 0:
-                            print '+++ cancelling edit of payload fields in channel.'
+                            print('+++ cancelling edit of payload fields in channel.')
                             break
                         self.channels[channel_index] = current_channel.add_payload_fields(*new_fields)
 
@@ -312,12 +312,12 @@ class EavesdropCLI(Cmd):
                         field_options = [{'label': f, 'value': f} for f in current_channel.payload_fields]
                         field = cli.MenuPrompt('field to delete', field_options).show()
                         if not field:
-                            print '+++ cancelling edit of payload fields in channel.'
+                            print('+++ cancelling edit of payload fields in channel.')
                             break
                         self.channels[channel_index] = current_channel.delete_payload_field(field)
 
-                    print '+++ channel "%s" now contains payload fields:' % current_channel.name
-                    print '\n'.join(['-%s' % f for f in current_channel.payload_fields])
+                    print('+++ channel "%s" now contains payload fields:' % current_channel.name)
+                    print('\n'.join(['-%s' % f for f in current_channel.payload_fields]))
 
             should_continue = cli.InputPrompt('edit another event channel property (Y/n)?',
                                               'y').show()
@@ -350,7 +350,7 @@ class EavesdropCLI(Cmd):
 
 
     def prompt_for_payload_fields(self, channel_name):
-        print '+++ adding payload fields'
+        print('+++ adding payload fields')
         fields = []
         while True:
             new_field = cli.InputPrompt('input field name').show()
@@ -361,13 +361,13 @@ class EavesdropCLI(Cmd):
                     continue
             break
 
-        print '+++ payload fields:\n-%s \n+++ added to event channel "%s".' \
-            % ('\n-'.join(fields), channel_name)
+        print('+++ payload fields:\n-%s \n+++ added to event channel "%s".' \
+            % ('\n-'.join(fields), channel_name))
         return fields
 
 
     def do_quit(self, arg):
-        print 'eavesdrop interactive mode exiting.'
+        print('eavesdrop interactive mode exiting.')
         raise SystemExit
 
 
@@ -376,11 +376,11 @@ class EavesdropCLI(Cmd):
 
 
     def show_global_settings(self):
-        print common.jsonpretty(self.global_settings.data())
+        print(common.jsonpretty(self.global_settings.data()))
 
 
     def edit_global_settings(self):
-        print '+++ updating eavesdrop settings...'
+        print('+++ updating eavesdrop settings...')
         settings_menu = []
         defaults = self.global_settings.current_values
         for key, value in defaults.iteritems():
@@ -403,8 +403,8 @@ class EavesdropCLI(Cmd):
 
     def edit_global_setting(self, setting_name):
         if not setting_name in self.global_settings.current_values.keys():
-            print "!! No such global setting. Available global settings are: "
-            print '\n'.join(['- %s' % (k) for k in self.global_settings.data().keys()])
+            print("!! No such global setting. Available global settings are: ")
+            print('\n'.join(['- %s' % (k) for k in self.global_settings.data().keys()]))
             return
 
         defaults = self.global_settings.current_values
@@ -434,7 +434,7 @@ class EavesdropCLI(Cmd):
 
 
     def make_svcobject(self, name):
-        print '+++ Register new service object'
+        print('+++ Register new service object')
         so_name = name or cli.InputPrompt('service object name').show()
         so_classname = cli.InputPrompt('service object class').show()
         so_params = self.create_service_object_params()
@@ -445,16 +445,16 @@ class EavesdropCLI(Cmd):
     def show_svcobject(self, name):
         index = self.get_service_object_index(name)
         if index < 0:
-            print '> No service object registered under the name %s.' % name
+            print('> No service object registered under the name %s.' % name)
             return
-        print common.jsonpretty(self.service_objects[index].data())
+        print(common.jsonpretty(self.service_objects[index].data()))
 
 
     def edit_svcobject(self, so_name):
-        print '+++ Updating service object'
+        print('+++ Updating service object')
         so_index = self.get_service_object_index(so_name)
         if so_index < 0:
-            print 'No service object registered under the name %s.' % so_name
+            print('No service object registered under the name %s.' % so_name)
             return
 
         current_so = self.service_objects[so_index]
@@ -502,8 +502,8 @@ class EavesdropCLI(Cmd):
                 self.edit_global_setting(setting_name)
             else:
                 if not setting_name in self.global_settings.data().keys():
-                    print "Available global settings are: "
-                    print '\n'.join(['- %s' % (k) for k in self.global_settings.data().keys()])
+                    print("Available global settings are: ")
+                    print('\n'.join(['- %s' % (k) for k in self.global_settings.data().keys()]))
                     return
 
                 attr_name = 'set_%s' % setting_name
@@ -515,21 +515,21 @@ class EavesdropCLI(Cmd):
 
 
     def list_channels(self):
-        print '+++ Event channels:'
-        print '\n'.join([c.name for c in self.channels])
+        print('+++ Event channels:')
+        print('\n'.join([c.name for c in self.channels]))
 
 
     def show_channel(self, name):
         index = self.get_channel_index(name)
         if index < 0:
-            print '> No event channel registered under the name %s.' % name
+            print('> No event channel registered under the name %s.' % name)
             return
-        print common.jsonpretty(self.channels[index].data())
+        print(common.jsonpretty(self.channels[index].data()))
 
 
     def list_svcobjects(self):
-        print '+++ Service objects:'
-        print '\n'.join([so.name for so in self.service_objects])
+        print('+++ Service objects:')
+        print('\n'.join([so.name for so in self.service_objects]))
 
 
     @docopt_cmd
@@ -647,7 +647,7 @@ class EavesdropCLI(Cmd):
 
         if arg['channel']:
             if not len(self.channels):
-                print 'You have not created any Event Channels yet.'
+                print('You have not created any Event Channels yet.')
                 return
             channel_name = object_name or self.select_channel()
             if not channel_name:
@@ -656,7 +656,7 @@ class EavesdropCLI(Cmd):
 
         elif arg['svcobj']:
             if not len(self.service_objects):
-                print 'You have not created any ServiceObjects yet.'
+                print('You have not created any ServiceObjects yet.')
                 return
             svcobj_name = object_name or self.select_service_object()
             if not svcobj_name:
@@ -683,13 +683,13 @@ class EavesdropCLI(Cmd):
             if object_name:
                 self.show_channel(object_name)
             else:
-                print 'Available Event Channels:'
+                print('Available Event Channels:')
                 self.list_channels()
         elif cmd_args['svcobj']:
             if object_name:
                 self.show_svcobject(object_name)
             else:
-                print 'Available ServiceObjects:'
+                print('Available ServiceObjects:')
                 self.list_svcobjects()
 
 
@@ -718,6 +718,6 @@ class EavesdropCLI(Cmd):
 
         message = self.get_save_condition()
         if message == 'ok':
-            print self.yaml_config()
+            print(self.yaml_config())
         else:
-            print message
+            print(message)

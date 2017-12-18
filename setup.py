@@ -10,7 +10,7 @@ from pip.download import PipSession
 
 
 NAME = 'eavesdroppr'
-VERSION = '0.9.1'
+VERSION = '0.9.3'
 PACKAGES = find_packages(where='src')
 DEPENDENCIES=['docopt',
               'docutils',
