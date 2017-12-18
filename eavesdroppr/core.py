@@ -6,7 +6,7 @@ from snap import snap, common
 from snap import cli_tools as cli
 from eavesdroppr import code_templates as code
 from eavesdroppr import config_templates as config
-from metaobjects import *
+from eavesdroppr.metaobjects import *
 import logging
 import jinja2
 import json
