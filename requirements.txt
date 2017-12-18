@@ -7,6 +7,6 @@ Jinja2==2.8
 packaging==16.8
 psycopg2==2.7.1
 PyYAML==3.12
-snap-micro==0.9.43
+snap-micro
 teamcity-messages==1.21
 pgpubsub==0.0.5
