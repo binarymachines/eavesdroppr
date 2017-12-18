@@ -4,8 +4,8 @@ import os, sys
 import pgpubsub
 from snap import snap, common
 from snap import cli_tools as cli
-from code_templates import *
-from config_templates import *
+from eavesdroppr import code_templates as code
+from eavesdroppr import config_templates as config
 from metaobjects import *
 import logging
 import jinja2
@@ -100,20 +100,20 @@ def generate_code(event_channel, channel_config, **kwargs):
 
     j2env = jinja2.Environment()
     template_mgr = common.JinjaTemplateManager(j2env)
-    json_func_template = j2env.from_string(JSON_BUILD_FUNC_TEMPLATE)
+    json_func_template = j2env.from_string(code.JSON_BUILD_FUNC_TEMPLATE)
     json_func = json_func_template.render(payload_fields=source_fields,
                                           pk_field=primary_key_field)
 
     if kwargs['procedure']:
-        print(PROC_TEMPLATE.format(schema=db_schema,
-                                   proc_name=procedure_name,
-                                   pk_field_name=primary_key_field,
-                                   pk_field_type=primary_key_type,
-                                   channel_name=event_channel,
-                                   json_build_func=json_func))
+        print(code.PROC_TEMPLATE.format(schema=db_schema,
+                                        proc_name=procedure_name,
+                                        pk_field_name=primary_key_field,
+                                        pk_field_type=primary_key_type,
+                                        channel_name=event_channel,
+                                        json_build_func=json_func))
 
     elif kwargs['trigger']:
-        print(TRIGGER_TEMPLATE.format(schema=db_schema,
+        print(code.TRIGGER_TEMPLATE.format(schema=db_schema,
                                       table_name=table_name,
                                       trigger_name=trigger_name,
                                       db_proc_name=procedure_name,
@@ -173,7 +173,7 @@ class EavesdropConfigWriter(object):
 
         kwreader.read(**kwargs)
         j2env = jinja2.Environment()
-        template = j2env.from_string(INIT_FILE)
+        template = j2env.from_string(config.INIT_FILE)
         return template.render(global_settings=kwreader.get_value('settings'),
                                channels=kwreader.get_value('channels') or [],
                                service_objects=kwargs.get('services', []))
