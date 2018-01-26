@@ -152,7 +152,7 @@ def listen(channel_id, yaml_config, **kwargs):
     else:
         handler_function = default_event_handler
 
-    service_objects = common.ServiceObjectRegistry(snap.initialize_services(yaml_config, logger))
+    service_objects = common.ServiceObjectRegistry(snap.initialize_services(yaml_config))
 
     pubsub.listen(channel_id)
     print('listening on channel "%s"...' % channel_id)
