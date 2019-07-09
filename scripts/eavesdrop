@@ -24,6 +24,7 @@ import yaml
 import pgpubsub
 import logging
 from snap import snap, common
+import eavesdroppr
 from eavesdroppr import core
 
 
@@ -49,7 +50,7 @@ def main(args):
 
     channel_id = args['<event_channel>']
     if not yaml_config['channels'].get(channel_id):
-        raise eavesdroppr.NoSuchEventChannel(channel_id)
+        raise core.NoSuchEventChannel(channel_id)
 
     channel_config = yaml_config['channels'][channel_id]
 
