@@ -6,7 +6,7 @@ itsdangerous==0.24
 Jinja2==2.8
 packaging==16.8
 psycopg2==2.7.1
-PyYAML==3.12
+PyYAML==5.4
 snap-micro
 teamcity-messages==1.21
 pgpubsub==0.0.5
